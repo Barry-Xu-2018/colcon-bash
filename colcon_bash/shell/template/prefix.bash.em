@@ -104,6 +104,26 @@ if [ -n "$COLCON_TRACE" ]; then
   echo "${_colcon_ordered_commands}"
   echo ">>>"
 fi
+
+# Save ordered command to cache file
+tmp_file=$(mktemp)
+cat > $tmp_file <<_END
+_colcon_prefix_sh_source_script() {
+  if [ -f "\$1" ]; then
+    if [ -n "\$COLCON_TRACE" ]; then
+      echo ". \"\$1\""
+    fi
+    . "\$1"
+  else
+    echo "not found: \"\$1\"" 1>&2
+  fi
+}
+_END
+echo "${_colcon_ordered_commands}" >> $tmp_file
+
+# If find lock, it means other process is making env.cache. So skip
+flock -n -x "${ENV_CACHE_LOCK_FILE}" mv $tmp_file "${ENV_CACHE_FILE}" || true
+
 eval "${_colcon_ordered_commands}"
 unset _colcon_ordered_commands
 
